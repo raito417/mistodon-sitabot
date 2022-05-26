@@ -1,0 +1,6 @@
+google-cloud
+google-auth
+google-api-python-client
+google-cloud-secret-manager
+google-cloud-firestore
+Mastodon.py
