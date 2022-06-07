@@ -149,6 +149,9 @@ def main(content, st, id):
 try:
     #mastodon.status_post('再稼働しました。 @raito', visibility='unlisted')
     mastodon.stream_user(Stream())
+except mastodon.Mastodon.MastodonMalformedEventError:
+    pass
+    traceback.print_exc()
 except:
     mastodon.status_post('何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
     traceback.print_exc()
