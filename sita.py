@@ -1,3 +1,4 @@
+import sys
 import traceback
 from mastodon import Mastodon, StreamListener
 import os
@@ -9,20 +10,45 @@ from google.cloud import firestore
 import urllib
 
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
-GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
 
 youbi = ['日','月','火','水','木','金','土']
 
+
+def check_test():
+    return len(sys.argv) == 2 and sys.argv[1] == "unit_test"
+
+is_test = check_test()
+
+class MastodonMock:
+    pass
+
+class StoreMock:
+    pass
+
+def create_mastodon_client(test = False):
+    if test:
+        return MastodonMock()
+    else:
+        CLIENT_ID = os.environ['CLIENT_ID']
+        CLIENT_SECRET = os.environ['CLIENT_SECRET']
+        ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
+        return Mastodon(
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            access_token = ACCESS_TOKEN,
+            api_base_url = 'https://mistodon.cloud'
+        )
+
 # mastodon
-CLIENT_ID = os.environ['CLIENT_ID']
-CLIENT_SECRET = os.environ['CLIENT_SECRET']
-ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
-mastodon = Mastodon(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    access_token = ACCESS_TOKEN,
-    api_base_url = 'https://mistodon.cloud'
-)
+mastodon = create_mastodon_client(is_test)
+
+def create_store(test = False):
+    if test:
+        return StoreMock()
+    else:
+        GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
+        firestore.Client(project=GCP_PROJECT_ID)
+
 
 def sita_error(st, content, id):
     error_text = f'何かがおかしい可能性があります。エラー：{content}'
@@ -56,7 +82,7 @@ def format_times(time):
         int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
         return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
 
-db = firestore.Client(project=GCP_PROJECT_ID)
+db = create_store(is_test)
 
 # sita
 def add_sita(user, sitakoto):
@@ -146,15 +172,22 @@ def main(content, st, id):
         mastodon.status_reply(st,'エラー：不明なエラー', id, visibility='unlisted')
         traceback.print_exc()
         return toot
-try:
-    #mastodon.status_post('再稼働しました。 @raito', visibility='unlisted')
-    mastodon.stream_user(Stream())
-except mastodon.Mastodon.MastodonMalformedEventError:
-    pass
-    traceback.print_exc()
-except:
-    mastodon.status_post('何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
-    traceback.print_exc()
+
+def unit_test():
+    print("unit test")
+
+if is_test:
+    unit_test()
+else:
+    try:
+        #mastodon.status_post('再稼働しました。 @raito', visibility='unlisted')
+        mastodon.stream_user(Stream())
+    except mastodon.Mastodon.MastodonMalformedEventError:
+        pass
+        traceback.print_exc()
+    except:
+        mastodon.status_post('何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
+        traceback.print_exc()
 
 
 if __name__ == '__main__':
