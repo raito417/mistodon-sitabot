@@ -47,7 +47,7 @@ def create_store(test = False):
         return StoreMock()
     else:
         GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
-        firestore.Client(project=GCP_PROJECT_ID)
+        return firestore.Client(project=GCP_PROJECT_ID)
 
 
 def sita_error(st, content, id):
