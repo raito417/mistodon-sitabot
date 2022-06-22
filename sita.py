@@ -43,7 +43,7 @@ def create_mastodon_client(test = False):
 # mastodon
 mastodon = create_mastodon_client(is_test)
 
-def create_store(test = False):
+def create_db(test = False):
     if test:
         return StoreMock()
     else:
@@ -83,7 +83,27 @@ def format_times(time):
         int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
         return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
 
-db = create_store(is_test)
+db = create_db(is_test)
+
+class Store:
+    """
+    db関連の処理をするクラス
+    今のところはlookupしか実装していない。 
+    """
+    def __init__(self, db):
+        self.db = db
+    
+    def find_doc(self, user):
+        return db.collection('mist_sita').document(str(user))
+    
+    # sitakotoは文字列（リストの時に最初の要素にするのは呼び出し側の責任）
+    def lookup(self, user, sitakoto):
+        doc_ref = self.find_doc(user)
+        return doc_ref.get().to_dict()[str(sitakoto)]
+
+
+
+
 
 # sita
 def add_sita(user, sitakoto):
@@ -118,14 +138,15 @@ def add_sita(user, sitakoto):
         print('例外発生！')
         traceback.print_exc()
     return {'count': count, 'last_time': last_time, 'interval': interval, 'error':'何らかのエラー'}
+
+
 # のいつ？
-def noitsu(user, sitakoto):
-    doc_ref = db.collection('mist_sita').document(str(user))
+def noitsu(user, sitakoto, store):
     if type(sitakoto) == list:
         sitakoto = sitakoto[0]
     sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿', urllib.parse.quote_plus(sitakoto))
     try:
-        sitakoto_dict = doc_ref.get().to_dict()[str(sitakoto)]
+        sitakoto_dict = store.lookup(user, sitakoto)
     except KeyError:
         sitakoto_dict = {}
     
@@ -144,6 +165,7 @@ def deleteall(user):
 # main
 
 def main(content, st, id):
+    store = Store(db)
     if not content or st['visibility'] == 'direct':
         return None
     elif content[0] == 'delete':
@@ -153,7 +175,7 @@ def main(content, st, id):
         mastodon.status_reply(st,'エラー：sitaの文字数が多すぎます', id, visibility='unlisted')
         sita_error(st, 'sitaの文字数が多すぎます', id)
     elif len(content) >= 2 and content[1] == 'のいつ？': 
-        itsu = noitsu(id, content[0])
+        itsu = noitsu(id, content[0], store)
         if itsu['count'] != 0:
             last_time = itsu['last_time']
             interval = itsu['interval']
@@ -174,13 +196,44 @@ def main(content, st, id):
         traceback.print_exc()
         return toot
 
-class TestHello(unittest.TestCase):
-    def test_hello(self):
-        self.assertEqual('hoge', 'hoge')
+
+class StoreMock:
+    def __init__(self):
+        self.returnValue = {}
+
+    def lookup(self, user, sitakoto):
+        self.user = user
+        self.sitakoto = sitakoto
+        return self.returnValue
+
+
+class TestSitaKoto(unittest.TestCase):
+    def setUp(self):
+        self.store = StoreMock()
+
+    def test_firstTime_Normal(self):
+        store = self.store
+        actual = noitsu("karino2012", "hogehoge", store)
+        self.assertEqual('karino2012', store.user)
+        self.assertEqual('hogehoge', store.sitakoto)
+        self.assertEqual(0, actual['count'])
+
+    def test_firstTime_Magic(self):
+        store = self.store
+        noitsu("karino2012", "hoge.ika", store)
+        self.assertEqual('hoge＿ika', store.sitakoto)
+
+    def test_secondTime(self):
+        store = self.store
+        tenMinutesBefore = datetime.datetime.now().replace(tzinfo=JST)-datetime.timedelta(minutes=10)
+        store.returnValue = [tenMinutesBefore]
+        actual = noitsu("karino2012", "hogehoge", store)
+        self.assertEqual(1, actual['count'])
+        self.assertEqual(actual['interval'], '0日0時間10分')
 
 
 def unit_test():
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestHello)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestSitaKoto)
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
