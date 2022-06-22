@@ -4,6 +4,7 @@ from mastodon import Mastodon, StreamListener
 import os
 import re
 import datetime
+import unittest
 
 # firestore
 from google.cloud import firestore
@@ -173,8 +174,15 @@ def main(content, st, id):
         traceback.print_exc()
         return toot
 
+class TestHello(unittest.TestCase):
+    def test_hello(self):
+        self.assertEqual('hoge', 'hoge')
+
+
 def unit_test():
-    print("unit test")
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestHello)
+    runner = unittest.TextTestRunner()
+    runner.run(suite)
 
 if is_test:
     unit_test()
