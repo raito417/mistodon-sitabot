@@ -20,15 +20,9 @@ def check_test():
 
 is_test = check_test()
 
-class MastodonMock:
-    pass
-
-class StoreMock:
-    pass
-
 def create_mastodon_client(test = False):
     if test:
-        return MastodonMock()
+        return {}
     else:
         CLIENT_ID = os.environ['CLIENT_ID']
         CLIENT_SECRET = os.environ['CLIENT_SECRET']
@@ -45,7 +39,7 @@ mastodon = create_mastodon_client(is_test)
 
 def create_db(test = False):
     if test:
-        return StoreMock()
+        return {}
     else:
         GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
         return firestore.Client(project=GCP_PROJECT_ID)
