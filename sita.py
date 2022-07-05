@@ -209,7 +209,7 @@ def main(content, st, id):
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
     elif len(content) >= 2 and content[1] == 'まとめ':
         m = matome(id, content, store)
-        if not m:
+        if m:
             if m['count'] == 1:
                 toot = f'''{content[0]}のまとめ\n
                         初回：{m['first']}({m['from_first']}日前)
