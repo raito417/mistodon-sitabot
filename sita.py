@@ -179,6 +179,7 @@ def matome(user, sitakoto, store):
         first_t = first.strftime("%Y/%m/%d %H:%M")
         return {
             'first': first_t,
+            'from_first': from_first,
             'count': 1
             }
     elif len(sitakoto_dict) == 0:
@@ -213,13 +214,16 @@ def main(content, st, id):
             if m['count'] == 1:
                 toot = f'''{content[0]}のまとめ
 初回：{m['first']}({m['from_first']}日前)
-                        '''
+'''
             else:
                 toot = f'''{content[0]}のまとめ
 初回：{m['first']}({m['from_first']}日前)
-最新：{m['last']}({m['count']}回目)
-1週間の平均回数：{m['week_ave']}
-                        '''
+最新：{m['last']}
+した回数：{m['count']}回
+1週間の平均回数（全期間）：{m['week_ave']}
+'''         
+                if m['count'] >= 10:
+                    toot = toot + f'1週間の平均回数（最新10回）：WIP'
         else:
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
 
