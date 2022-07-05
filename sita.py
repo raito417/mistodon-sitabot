@@ -152,6 +152,37 @@ def noitsu(user, sitakoto, store):
     else:
         last_time = None
         return {'count': 0}
+# まとめ
+def matome(user, sitakoto, store):
+    sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
+    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿', urllib.parse.quote_plus(sitakoto))
+    try:
+        sitakoto_dict = store.lookup(user, sitakoto)
+    except KeyError:
+        sitakoto_dict = {}
+
+    if len(sitakoto_dict) >= 2:
+        first, last = sitakoto_dict[0], sitakoto_dict[-1]
+        first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
+        count = len(sitakoto_dict)
+        from_first = (first - last).days if (first-last).days != 0 else 1
+        week_ave = count / (from_first/7)
+        return {
+            'first': first_t,  
+            'last': last_t, 
+            'count': count,
+            'from_first': from_first,
+            'week_ave': week_ave
+            }
+    elif len(sitakoto_dict) == 1:
+        first = sitakoto_dict[0]
+        first_t = first.strftime("%Y/%m/%d %H:%M")
+        return {
+            'first': first_t,
+            'count': 1
+            }
+    elif len(sitakoto_dict) == 0:
+        return {'count': 0}
 def deleteall(user):
     db.collection('mist_sita').document(user).delete()
 
@@ -176,6 +207,22 @@ def main(content, st, id):
             toot = f'最後に{content[0]}したのは、{interval}前（{last_time}）の{itsu["count"]}回目です。'
         else:
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
+    elif len(content) >= 2 and content[1] == 'まとめ':
+        m = matome(id, content, store)
+        if not m:
+            if m['count'] == 1:
+                toot = f'''{content[0]}のまとめ\n
+                        初回：{m['first']}({m['from_first']}日前)
+                        '''
+            else:
+                toot = f'''{content[0]}のまとめ\n
+                        初回：{m['first']}({m['from_first']}日前)\n
+                        最新：{m['last']}({m['count']}回目)\n
+                        1週間の平均回数：{m['week_ave']}
+                        '''
+        else:
+            toot = f'あなたはまだ{content[0]}をしたことがないようです。'
+
     else:
         sita = add_sita(id,content)
         count = sita['count']
@@ -184,6 +231,8 @@ def main(content, st, id):
         toot = f'おつパオ\n{last_time}以来、{interval}ぶり{count}回目の{content[0]}'
     try:
         reply_text = toot.replace('@', '＠')
+        if len(reply_text) >= 500:
+            reply_text = reply_text[:495] + '...'
         mastodon.status_reply(st, reply_text, id, visibility='unlisted')
     except: 
         mastodon.status_reply(st,'エラー：不明なエラー', id, visibility='unlisted')
