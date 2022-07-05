@@ -167,7 +167,7 @@ def matome(user, sitakoto, store):
         first, last = sitakoto_dict[0], sitakoto_dict[-1]
         first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
         count = len(sitakoto_dict)
-        from_first = (last - first).days if (first-last).days != 0 else 1
+        from_first = (last - first).days if (last-first).days != 0 else 1
         from_last = ((datetime.datetime.now() + datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
         week_ave = format(count / (from_first/7), '.3f')
         m = {
