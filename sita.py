@@ -206,6 +206,7 @@ def deleteall(user):
 
 def main(content, st, id):
     store = Store(db)
+    toot = ''
     if not content or st['visibility'] == 'direct':
         return None
     elif content[0] == 'delete':
