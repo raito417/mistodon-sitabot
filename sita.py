@@ -167,12 +167,14 @@ def matome(user, sitakoto, store):
         first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
         count = len(sitakoto_dict)
         from_first = (last - first).days if (first-last).days != 0 else 1
+        from_last = (datetime.datetime.now() - last).days
         week_ave = format(count / (from_first/7), '.3f')
         m = {
             'first': first_t,  
             'last': last_t, 
             'count': count,
             'from_first': from_first,
+            'from_last': from_last,
             'week_ave': week_ave
             }
         if len(sitakoto_dict) >= 10:
@@ -184,11 +186,11 @@ def matome(user, sitakoto, store):
                 'before_10': before_10_t,
                 'from_10_ave': from_10_ave
             })
-
         return m
     elif len(sitakoto_dict) == 1:
         first = sitakoto_dict[0]
         first_t = first.strftime("%Y/%m/%d %H:%M")
+        from_first = (datetime.datetime.now() - first).days
         return {
             'first': first_t,
             'from_first': from_first,
@@ -210,7 +212,6 @@ def main(content, st, id):
         deleteall(id)
         mastodon.status_reply(st, '削除しました！')
     elif len(content[0]) > 400:
-        mastodon.status_reply(st,'エラー：sitaの文字数が多すぎます', id, visibility='unlisted')
         sita_error(st, 'sitaの文字数が多すぎます', id)
     elif len(content) >= 2 and content[1] == 'のいつ？': 
         itsu = noitsu(id, content[0], store)
@@ -229,7 +230,7 @@ def main(content, st, id):
             else:
                 toot = f'{content[0]}のまとめ\n'\
                         + f'初回：{m["first"]}({m["from_first"]}日前)'\
-                        + f'最新：{m["last"]}'\
+                        + f'最新：{m["last"]}({m["from_last"]})'\
                         + f'した回数：{m["count"]}回'\
                         + f'1週間の平均回数（全期間）：{m["week_ave"]}'       
                 if m['count'] >= 10:
@@ -248,8 +249,8 @@ def main(content, st, id):
         toot = f'おつパオ\n{last_time}以来、{interval}ぶり{count}回目の{content[0]}'
     try:
         reply_text = toot.replace('@', '＠')
-        if len(reply_text) >= 500:
-            reply_text = reply_text[:495] + '...'
+        if len(reply_text) >= 450:
+            reply_text = reply_text[:450] + '...'
         mastodon.status_reply(st, reply_text, id, visibility='unlisted')
     except: 
         mastodon.status_reply(st,'エラー：不明なエラー', id, visibility='unlisted')
@@ -301,7 +302,6 @@ if is_test:
     unit_test()
 else:
     try:
-        #mastodon.status_post('再稼働しました。 @raito', visibility='unlisted')
         mastodon.stream_user(Stream())
     except mastodon.Mastodon.MastodonMalformedEventError:
         pass
