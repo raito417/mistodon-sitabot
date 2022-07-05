@@ -13,7 +13,7 @@ import urllib
 
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
 
-youbi = ['日','月','火','水','木','金','土']
+youbi = ['日', '月', '火', '水', '木', '金', '土']
 
 
 def check_test():
@@ -21,7 +21,8 @@ def check_test():
 
 is_test = check_test()
 
-def create_mastodon_client(test = False):
+
+def create_mastodon_client(test=False):
     if test:
         return {}
     else:
@@ -31,14 +32,15 @@ def create_mastodon_client(test = False):
         return Mastodon(
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
-            access_token = ACCESS_TOKEN,
-            api_base_url = 'https://mistodon.cloud'
+            access_token=ACCESS_TOKEN,
+            api_base_url='https://mistodon.cloud'
         )
 
 # mastodon
 mastodon = create_mastodon_client(is_test)
 
-def create_db(test = False):
+
+def create_db(test=False):
     if test:
         return {}
     else:
@@ -50,10 +52,12 @@ def sita_error(st, content, id):
     error_text = f'何かがおかしい可能性があります。エラー：{content}'
     mastodon.status_reply(st, error_text, id, visibility='unlisted')
 
+
 class Stream(StreamListener):
+
     def __init__(self):
         super(Stream, self).__init__()
-        
+
     def on_notification(self, notification):
         if notification['type'] == 'mention':
             content = notification['status']['content']
@@ -66,50 +70,49 @@ class Stream(StreamListener):
 
 # firestore
 def format_times(time):
-        lastTime = time + datetime.timedelta(hours=9)
-        lastTime_format = lastTime.strftime("%Y/%m/%d %H:%M")
-        #前回からの間隔を計算
-        now = datetime.datetime.now().replace(tzinfo=JST)
-        interval = now - time.replace(tzinfo=JST)
-        total_secs = interval.total_seconds()
-        days, amari = divmod(total_secs, 24*3600)
-        hours, amari = divmod(amari, 3600)
-        minutes, secs = divmod(amari, 60)
-        int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
-        return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
+    lastTime = time + datetime.timedelta(hours=9)
+    lastTime_format = lastTime.strftime("%Y/%m/%d %H:%M")
+    # 前回からの間隔を計算
+    now = datetime.datetime.now().replace(tzinfo=JST)
+    interval = now - time.replace(tzinfo=JST)
+    total_secs = interval.total_seconds()
+    days, amari = divmod(total_secs, 24 * 3600)
+    hours, amari = divmod(amari, 3600)
+    minutes, secs = divmod(amari, 60)
+    int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
+    return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
 
 db = create_db(is_test)
+
 
 class Store:
     """
     db関連の処理をするクラス
     今のところはlookupしか実装していない。 
     """
+
     def __init__(self, db):
         self.db = db
-    
+
     def find_doc(self, user):
         return db.collection('mist_sita').document(str(user))
-    
+
     # sitakotoは文字列（リストの時に最初の要素にするのは呼び出し側の責任）
     def lookup(self, user, sitakoto):
         doc_ref = self.find_doc(user)
         return doc_ref.get().to_dict()[str(sitakoto)]
 
 
-
-
-
 # sita
 def add_sita(user, sitakoto):
     doc_ref = db.collection('mist_sita').document(str(user))
     doc = doc_ref.get()
-    if type(sitakoto) == list:
-        sitakoto = sitakoto[0]
-    
-    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿', urllib.parse.quote_plus(sitakoto))
+
+    sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
+    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿',
+                      urllib.parse.quote_plus(sitakoto))
     if len(sitakoto) > 1500:
-        return {'error':'sitaの文字数が多すぎます。'}
+        return {'error': 'sitaの文字数が多すぎます。'}
     try:
         if doc.exists:
             doc_ref.update({
@@ -121,92 +124,90 @@ def add_sita(user, sitakoto):
             })
         sitakoto_dict = doc_ref.get().to_dict()[str(sitakoto)]
         count = len(sitakoto_dict)
-        if count < 2 :
+        if count < 2:
             last_time = sitakoto_dict[-1]
         else:
             last_time = sitakoto_dict[-2]
         t = format_times(last_time)
         last_time = t['lastTime']
-        interval =  t['interval']
+        interval = t['interval']
     except:
         count, last_time, interval = 0, 0, 0
         print('例外発生！')
         traceback.print_exc()
-    return {'count': count, 'last_time': last_time, 'interval': interval, 'error':'何らかのエラー'}
+    return {'count': count, 'last_time': last_time, 'interval': interval, 'error': '何らかのエラー'}
 
 
 # のいつ？
 def noitsu(user, sitakoto, store):
-    if type(sitakoto) == list:
-        sitakoto = sitakoto[0]
-    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿', urllib.parse.quote_plus(sitakoto))
+    sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
+    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿',
+                      urllib.parse.quote_plus(sitakoto))
     try:
         sitakoto_dict = store.lookup(user, sitakoto)
     except KeyError:
         sitakoto_dict = {}
-    
-    if len(sitakoto_dict) >= 1:
-        last_time = sitakoto_dict[-1]
-        t = format_times(last_time)
-        last_time, interval = t['lastTime'], t['interval']
-        return {'count': len(sitakoto_dict), 'last_time': last_time, 'interval': interval}
-    else:
-        last_time = None
+
+    count = len(sitakoto_dict)
+    if count == 0:
         return {'count': 0}
+    else:
+        t = format_times(sitakoto_dict[-1])
+        return {'count': count, 'last_time': t['lastTime'], 'interval': t['interval']}
+
 
 # まとめ
 def matome(user, sitakoto, store):
     sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
-    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿', urllib.parse.quote_plus(sitakoto))
+    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿',
+                      urllib.parse.quote_plus(sitakoto))
     try:
         sitakoto_dict = store.lookup(user, sitakoto)
     except KeyError:
         sitakoto_dict = {}
 
-    if len(sitakoto_dict) >= 2:
+    count = len(sitakoto_dict)
+    if count == 0:
+        return {'count': 0}
+    elif count == 1:
+        first = sitakoto_dict[0]
+        from_first = ((datetime.datetime.now(
+        ) + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
+        return {
+            'first': first.strftime("%Y/%m/%d %H:%M"),
+            'from_first': from_first,
+            'count': 1
+        }
+    else:
         first, last = sitakoto_dict[0], sitakoto_dict[-1]
-        first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
-        count = len(sitakoto_dict)
-        from_first = (last - first).days if (last-first).days != 0 else 1
-        from_last = ((datetime.datetime.now() + datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
-        week_ave = format(count / (from_first/7), '.3f')
+        from_first = (last - first).days if (last - first).days != 0 else 1
+        from_last = ((datetime.datetime.now() +
+                      datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
         m = {
-            'first': first_t,  
-            'last': last_t, 
+            'first': first.strftime("%Y/%m/%d"),
+            'last': last.strftime("%Y/%m/%d"),
             'count': count,
             'from_first': from_first,
             'from_last': from_last,
-            'week_ave': week_ave
-            }
-        if len(sitakoto_dict) >= 10:
+            'week_ave': format(count / (from_first / 7), '.3f')
+        }
+        if count >= 10:
             before_10 = sitakoto_dict[-10]
-            before_10_t = before_10.strftime("%Y%m%d")
             from_10 = (last - before_10).days if (last - before_10) != 0 else 1
-            from_10_ave = format(10 / (from_10/7), '.3f') 
             m.update({
-                'before_10': before_10_t,
-                'from_10_ave': from_10_ave
+                'before_10': before_10.strftime("%Y%m%d"),
+                'from_10_ave': format(10 / (from_10 / 7), '.3f')
             })
         return m
-    elif len(sitakoto_dict) == 1:
-        first = sitakoto_dict[0]
-        first_t = first.strftime("%Y/%m/%d %H:%M")
-        from_first = ((datetime.datetime.now() + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
-        return {
-            'first': first_t,
-            'from_first': from_first,
-            'count': 1
-            }
-    elif len(sitakoto_dict) == 0:
-        return {'count': 0}
+
 
 def matome_format(target, m):
     res = []
-    if m['count'] == 1:
+    if m['count'] == 0:
+        res.append(f'あなたはまだ{target}をしたことがないようです。')
+    elif m['count'] == 1:
         res.append(f'{target}のまとめ')
         res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
-    elif m['count'] == 0:
-        res.append(f'あなたはまだ{target}をしたことがないようです。')
     else:
         res.append(f'{target}のまとめ')
         res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
@@ -218,52 +219,52 @@ def matome_format(target, m):
 
     return '\n'.join(res)
 
+
 def deleteall(user):
     db.collection('mist_sita').document(user).delete()
 
 
 # main
-
 def main(content, st, id):
     store = Store(db)
     toot = ''
     if not content or st['visibility'] == 'direct':
         return None
-    elif content[0] == 'delete':
-        deleteall(id)
-        mastodon.status_reply(st, '削除しました！')
     elif len(content[0]) > 400:
         sita_error(st, 'sitaの文字数が多すぎます', id)
         return None
-    elif len(content) >= 2 and content[1] == 'のいつ？': 
-        itsu = noitsu(id, content[0], store)
-        if itsu['count'] != 0:
-            last_time = itsu['last_time']
-            interval = itsu['interval']
-            toot = f'最後に{content[0]}したのは、{interval}前（{last_time}）の{itsu["count"]}回目です。'
-        else:
-            toot = f'あなたはまだ{content[0]}をしたことがないようです。'
-    elif len(content) >= 2 and content[1] == 'まとめ':
-        m = matome(id, content, store)
-        toot = matome_format(content[0], m)
+
+    if content[0] == 'delete':
+        deleteall(id)
+        mastodon.status_reply(st, '削除しました！')
+    elif len(content) >= 2:
+        target = content[0]
+        command = content[1]
+        if command == 'のいつ？':
+            itsu = noitsu(id, target, store)
+            if itsu['count'] != 0:
+                toot = f'最後に{target}したのは、{itsu['interval']}前（{itsu['last_time']}）の{itsu["count"]}回目です。'
+            else:
+                toot = f'あなたはまだ{target}をしたことがないようです。'
+        elif command == 'まとめ':
+            m = matome(id, content, store)
+            toot = matome_format(target, m)
     else:
-        sita = add_sita(id,content)
-        count = sita['count']
-        last_time = sita['last_time']
-        interval = sita['interval']
-        toot = f'おつパオ\n{last_time}以来、{interval}ぶり{count}回目の{content[0]}'
+        sita = add_sita(id, content)
+        toot = f'おつパオ\n{sita['last_time']}以来、{sita['interval']}ぶり{sita['count']}回目の{target}'
     try:
         reply_text = toot.replace('@', '＠')
         if len(reply_text) >= 450:
             reply_text = reply_text[:450] + '...'
         mastodon.status_reply(st, reply_text, id, visibility='unlisted')
-    except: 
-        mastodon.status_reply(st,'エラー：不明なエラー', id, visibility='unlisted')
+    except:
+        mastodon.status_reply(st, 'エラー：不明なエラー', id, visibility='unlisted')
         traceback.print_exc()
         return toot
 
 
 class StoreMock:
+
     def __init__(self):
         self.returnValue = {}
 
@@ -274,6 +275,7 @@ class StoreMock:
 
 
 class TestSitaKoto(unittest.TestCase):
+
     def setUp(self):
         self.store = StoreMock()
 
@@ -291,25 +293,29 @@ class TestSitaKoto(unittest.TestCase):
 
     def test_secondTime(self):
         store = self.store
-        tenMinutesBefore = datetime.datetime.now().replace(tzinfo=JST)-datetime.timedelta(minutes=10)
+        tenMinutesBefore = datetime.datetime.now().replace(
+            tzinfo=JST) - datetime.timedelta(minutes=10)
         store.returnValue = [tenMinutesBefore]
         actual = noitsu("karino2012", "hogehoge", store)
         self.assertEqual(1, actual['count'])
         self.assertEqual(actual['interval'], '0日0時間10分')
 
     def test_matome_format_none(self):
-        actual = matome_format("hoge", {'count':0})
+        actual = matome_format("hoge", {'count': 0})
         self.assertEqual("あなたはまだhogeをしたことがないようです。", actual)
 
     def test_matome_format_one(self):
-        actual = matome_format("hoge", {'count':1, 'first': "2022/7/5 12:15", 'from_first': 3 })
+        actual = matome_format(
+            "hoge", {'count': 1, 'first': "2022/7/5 12:15", 'from_first': 3})
         self.assertEqual("hogeのまとめ\n初回：2022/7/5 12:15(3日前)", actual)
 
     def test_matome_format_two(self):
-        m = {'count':2, 'first': "2022/7/1 12:15", 'from_first': 7,
-                'last':"2022/7/5 21:11", "from_last": 3, 'week_ave': 0.7 }
+        m = {'count': 2, 'first': "2022/7/1 12:15", 'from_first': 7,
+             'last': "2022/7/5 21:11", "from_last": 3, 'week_ave': 0.7}
         actual = matome_format("hoge", m)
-        self.assertEqual("hogeのまとめ\n初回：2022/7/1 12:15(7日前)\n最新：2022/7/5 21:11(3日前)\nした回数：2回\n1週間の平均回数（全期間）：0.7", actual)
+        self.assertEqual(
+            "hogeのまとめ\n初回：2022/7/1 12:15(7日前)\n最新：2022/7/5 21:11(3日前)\nした回数：2回\n1週間の平均回数（全期間）：0.7", actual)
+
 
 def unit_test():
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestSitaKoto)
@@ -325,7 +331,8 @@ else:
         pass
         traceback.print_exc()
     except:
-        mastodon.status_post('何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
+        mastodon.status_post(
+            '何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
         traceback.print_exc()
 
 
