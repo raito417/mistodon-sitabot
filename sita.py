@@ -153,6 +153,7 @@ def noitsu(user, sitakoto, store):
     else:
         last_time = None
         return {'count': 0}
+
 # まとめ
 def matome(user, sitakoto, store):
     sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
@@ -167,7 +168,7 @@ def matome(user, sitakoto, store):
         first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
         count = len(sitakoto_dict)
         from_first = (last - first).days if (first-last).days != 0 else 1
-        from_last = (datetime.datetime.now().replace(tzinfo=JST) - last).days
+        from_last = ((datetime.datetime.now() + datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
         week_ave = format(count / (from_first/7), '.3f')
         m = {
             'first': first_t,  
@@ -190,7 +191,7 @@ def matome(user, sitakoto, store):
     elif len(sitakoto_dict) == 1:
         first = sitakoto_dict[0]
         first_t = first.strftime("%Y/%m/%d %H:%M")
-        from_first = (datetime.datetime.now().replace(tzinfo=JST) - first).days
+        from_first = ((datetime.datetime.now() + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
         return {
             'first': first_t,
             'from_first': from_first,
