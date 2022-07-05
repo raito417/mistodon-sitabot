@@ -234,7 +234,7 @@ def main(content, st, id):
         else:
             toot = f'{content[0]}のまとめ\n'\
                     + f'初回：{m["first"]}({m["from_first"]}日前)\n'\
-                    + f'最新：{m["last"]}({m["from_last"]})\n'\
+                    + f'最新：{m["last"]}({m["from_last"]}日前)\n'\
                     + f'した回数：{m["count"]}回\n'\
                     + f'1週間の平均回数（全期間）：{m["week_ave"]}'       
             if m['count'] >= 10:
