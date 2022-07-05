@@ -242,16 +242,16 @@ def main(content, st, id):
         command = content[1]
         if command == 'のいつ？':
             itsu = noitsu(id, target, store)
-            if itsu['count'] != 0:
-                toot = f'最後に{target}したのは、{itsu['interval']}前（{itsu['last_time']}）の{itsu["count"]}回目です。'
-            else:
+            if itsu['count'] == 0:
                 toot = f'あなたはまだ{target}をしたことがないようです。'
+            else:
+                toot = f'最後に{target}したのは、{itsu["interval"]}前（{itsu["last_time"]}）の{itsu["count"]}回目です。'
         elif command == 'まとめ':
             m = matome(id, content, store)
             toot = matome_format(target, m)
     else:
         sita = add_sita(id, content)
-        toot = f'おつパオ\n{sita['last_time']}以来、{sita['interval']}ぶり{sita['count']}回目の{target}'
+        toot = f'おつパオ\n{sita["last_time"]}以来、{sita["interval"]}ぶり{sita["count"]}回目の{target}'
     try:
         reply_text = toot.replace('@', '＠')
         if len(reply_text) >= 450:
