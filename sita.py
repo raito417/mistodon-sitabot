@@ -211,13 +211,13 @@ def main(content, st, id):
         m = matome(id, content, store)
         if m:
             if m['count'] == 1:
-                toot = f'''{content[0]}のまとめ\n
+                toot = f'''{content[0]}のまとめ
 初回：{m['first']}({m['from_first']}日前)
                         '''
             else:
-                toot = f'''{content[0]}のまとめ\n
-初回：{m['first']}({m['from_first']}日前)\n
-最新：{m['last']}({m['count']}回目)\n
+                toot = f'''{content[0]}のまとめ
+初回：{m['first']}({m['from_first']}日前)
+最新：{m['last']}({m['count']}回目)
 1週間の平均回数：{m['week_ave']}
                         '''
         else:
