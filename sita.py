@@ -1,3 +1,4 @@
+from ntpath import join
 import sys
 import traceback
 from mastodon import Mastodon, StreamListener
@@ -167,13 +168,24 @@ def matome(user, sitakoto, store):
         count = len(sitakoto_dict)
         from_first = (last - first).days if (first-last).days != 0 else 1
         week_ave = format(count / (from_first/7), '.3f')
-        return {
+        m = {
             'first': first_t,  
             'last': last_t, 
             'count': count,
             'from_first': from_first,
             'week_ave': week_ave
             }
+        if len(sitakoto_dict) >= 10:
+            before_10 = sitakoto_dict[-10]
+            before_10_t = before_10.strftime("%Y%m%d")
+            from_10 = (last - before_10).days if (last - before_10) != 0 else 1
+            from_10_ave = format(10 / (from_10/7), '.3f') 
+            m.update({
+                'before_10': before_10_t,
+                'from_10_ave': from_10_ave
+            })
+
+        return m
     elif len(sitakoto_dict) == 1:
         first = sitakoto_dict[0]
         first_t = first.strftime("%Y/%m/%d %H:%M")
@@ -223,9 +235,12 @@ def main(content, st, id):
 1週間の平均回数（全期間）：{m['week_ave']}
 '''         
                 if m['count'] >= 10:
-                    toot = toot + f'1週間の平均回数（最新10回）：WIP'
+                    toot = [toot]
+                    toot.append(f'1週間の平均回数（最新10回分）：{m["before_10_ave"]}')
         else:
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
+    if type(toot) == list:
+        toot = ''.join(toot)
 
     else:
         sita = add_sita(id,content)
