@@ -214,6 +214,7 @@ def main(content, st, id):
         mastodon.status_reply(st, '削除しました！')
     elif len(content[0]) > 400:
         sita_error(st, 'sitaの文字数が多すぎます', id)
+        return None
     elif len(content) >= 2 and content[1] == 'のいつ？': 
         itsu = noitsu(id, content[0], store)
         if itsu['count'] != 0:
