@@ -201,24 +201,22 @@ def matome(user, sitakoto, store):
         return {'count': 0}
 
 def matome_format(target, m):
+    res = []
     if m['count'] == 1:
-        toot = f'{target}のまとめ\n'\
-                + f'初回：{m["first"]}({m["from_first"]}日前)'
+        res.append(f'{target}のまとめ')
+        res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
     elif m['count'] == 0:
-        toot = f'あなたはまだ{target}をしたことがないようです。'
+        res.append(f'あなたはまだ{target}をしたことがないようです。')
     else:
-        toot = f'{target}のまとめ\n'\
-                + f'初回：{m["first"]}({m["from_first"]}日前)\n'\
-                + f'最新：{m["last"]}({m["from_last"]}日前)\n'\
-                + f'した回数：{m["count"]}回\n'\
-                + f'1週間の平均回数（全期間）：{m["week_ave"]}'       
+        res.append(f'{target}のまとめ')
+        res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
+        res.append(f'最新：{m["last"]}({m["from_last"]}日前)')
+        res.append(f'した回数：{m["count"]}回')
+        res.append(f'1週間の平均回数（全期間）：{m["week_ave"]}')
         if m['count'] >= 10:
-            toot = [toot]
-            toot.append(f'\n1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
-        
-    if type(toot) == list:
-        toot = ''.join(toot)
-    return toot
+            res.append(f'1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
+
+    return '\n'.join(res)
 
 def deleteall(user):
     db.collection('mist_sita').document(user).delete()
