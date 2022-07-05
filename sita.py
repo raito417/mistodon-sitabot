@@ -165,8 +165,8 @@ def matome(user, sitakoto, store):
         first, last = sitakoto_dict[0], sitakoto_dict[-1]
         first_t, last_t =  first.strftime("%Y/%m/%d"), last.strftime("%Y/%m/%d")
         count = len(sitakoto_dict)
-        from_first = (first - last).days if (first-last).days != 0 else 1
-        week_ave = count / (from_first/7)
+        from_first = (last - first).days if (first-last).days != 0 else 1
+        week_ave = format(count / (from_first/7), '.3f')
         return {
             'first': first_t,  
             'last': last_t, 
@@ -212,13 +212,13 @@ def main(content, st, id):
         if m:
             if m['count'] == 1:
                 toot = f'''{content[0]}のまとめ\n
-                        初回：{m['first']}({m['from_first']}日前)
+初回：{m['first']}({m['from_first']}日前)
                         '''
             else:
                 toot = f'''{content[0]}のまとめ\n
-                        初回：{m['first']}({m['from_first']}日前)\n
-                        最新：{m['last']}({m['count']}回目)\n
-                        1週間の平均回数：{m['week_ave']}
+初回：{m['first']}({m['from_first']}日前)\n
+最新：{m['last']}({m['count']}回目)\n
+1週間の平均回数：{m['week_ave']}
                         '''
         else:
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
