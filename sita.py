@@ -225,7 +225,7 @@ def main(content, st, id):
         if m:
             if m['count'] == 1:
                 toot = f'{content[0]}のまとめ\n'\
-                        + '初回：{m["first"]}({m["from_first"]}日前)'
+                        + f'初回：{m["first"]}({m["from_first"]}日前)'
             else:
                 toot = f'{content[0]}のまとめ\n'\
                         + f'初回：{m["first"]}({m["from_first"]}日前)'\
