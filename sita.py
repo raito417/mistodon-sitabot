@@ -224,16 +224,14 @@ def main(content, st, id):
         m = matome(id, content, store)
         if m:
             if m['count'] == 1:
-                toot = f'''{content[0]}のまとめ
-初回：{m['first']}({m['from_first']}日前)
-'''
+                toot = f'{content[0]}のまとめ\n'\
+                        + '初回：{m["first"]}({m["from_first"]}日前)'
             else:
-                toot = f'''{content[0]}のまとめ
-初回：{m['first']}({m['from_first']}日前)
-最新：{m['last']}
-した回数：{m['count']}回
-1週間の平均回数（全期間）：{m['week_ave']}
-'''         
+                toot = f'{content[0]}のまとめ\n'\
+                        + f'初回：{m["first"]}({m["from_first"]}日前)'\
+                        + f'最新：{m["last"]}'\
+                        + f'した回数：{m["count"]}回'\
+                        + f'1週間の平均回数（全期間）：{m["week_ave"]}'       
                 if m['count'] >= 10:
                     toot = [toot]
                     toot.append(f'1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
