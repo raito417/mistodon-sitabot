@@ -239,8 +239,8 @@ def main(content, st, id):
                     toot.append(f'1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
         else:
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
-    if type(toot) == list:
-        toot = ''.join(toot)
+        if type(toot) == list:
+            toot = ''.join(toot)
 
     else:
         sita = add_sita(id,content)
