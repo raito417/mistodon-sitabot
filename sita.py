@@ -199,6 +199,25 @@ def matome(user, sitakoto, store):
             }
     elif len(sitakoto_dict) == 0:
         return {'count': 0}
+
+def matome_format(target, m):
+    res = []
+    if m['count'] == 1:
+        res.append(f'{target}のまとめ')
+        res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
+    elif m['count'] == 0:
+        res.append(f'あなたはまだ{target}をしたことがないようです。')
+    else:
+        res.append(f'{target}のまとめ')
+        res.append(f'初回：{m["first"]}({m["from_first"]}日前)')
+        res.append(f'最新：{m["last"]}({m["from_last"]}日前)')
+        res.append(f'した回数：{m["count"]}回')
+        res.append(f'1週間の平均回数（全期間）：{m["week_ave"]}')
+        if m['count'] >= 10:
+            res.append(f'1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
+
+    return '\n'.join(res)
+
 def deleteall(user):
     db.collection('mist_sita').document(user).delete()
 
@@ -226,24 +245,7 @@ def main(content, st, id):
             toot = f'あなたはまだ{content[0]}をしたことがないようです。'
     elif len(content) >= 2 and content[1] == 'まとめ':
         m = matome(id, content, store)
-        if m['count'] == 1:
-            toot = f'{content[0]}のまとめ\n'\
-                    + f'初回：{m["first"]}({m["from_first"]}日前)'
-        elif m['count'] == 0:
-            toot = f'あなたはまだ{content[0]}をしたことがないようです。'
-        else:
-            toot = f'{content[0]}のまとめ\n'\
-                    + f'初回：{m["first"]}({m["from_first"]}日前)\n'\
-                    + f'最新：{m["last"]}({m["from_last"]}日前)\n'\
-                    + f'した回数：{m["count"]}回\n'\
-                    + f'1週間の平均回数（全期間）：{m["week_ave"]}'       
-            if m['count'] >= 10:
-                toot = [toot]
-                toot.append(f'\n1週間の平均回数（最新10回分）：{m["from_10_ave"]}')
-            
-        if type(toot) == list:
-            toot = ''.join(toot)
-
+        toot = matome_format(content[0], m)
     else:
         sita = add_sita(id,content)
         count = sita['count']
@@ -295,6 +297,19 @@ class TestSitaKoto(unittest.TestCase):
         self.assertEqual(1, actual['count'])
         self.assertEqual(actual['interval'], '0日0時間10分')
 
+    def test_matome_format_none(self):
+        actual = matome_format("hoge", {'count':0})
+        self.assertEqual("あなたはまだhogeをしたことがないようです。", actual)
+
+    def test_matome_format_one(self):
+        actual = matome_format("hoge", {'count':1, 'first': "2022/7/5 12:15", 'from_first': 3 })
+        self.assertEqual("hogeのまとめ\n初回：2022/7/5 12:15(3日前)", actual)
+
+    def test_matome_format_two(self):
+        m = {'count':2, 'first': "2022/7/1 12:15", 'from_first': 7,
+                'last':"2022/7/5 21:11", "from_last": 3, 'week_ave': 0.7 }
+        actual = matome_format("hoge", m)
+        self.assertEqual("hogeのまとめ\n初回：2022/7/1 12:15(7日前)\n最新：2022/7/5 21:11(3日前)\nした回数：2回\n1週間の平均回数（全期間）：0.7", actual)
 
 def unit_test():
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestSitaKoto)
