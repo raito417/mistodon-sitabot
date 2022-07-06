@@ -171,18 +171,19 @@ def matome(user, sitakoto, store):
         return {'count': 0}
     elif count == 1:
         first = sitakoto_dict[0]
-        from_first = ((datetime.datetime.now(
-        ) + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
+        from_first = ((datetime.datetime.now
+                        + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
         return {
             'first': first.strftime("%Y/%m/%d %H:%M"),
             'from_first': from_first,
             'count': 1
         }
     else:
-        first, last = sitakoto_dict[0], sitakoto_dict[-1]
+        first, last = (sitakoto_dict[0] + datetime.timedelta(hours=9)).replace(tzinfo=JST),\
+                        (sitakoto_dict[-1]+ datetime.timedelta(hours=9)).replace(tzinfo=JST)
         from_first = (last - first).days if (last - first).days != 0 else 1
-        from_last = ((datetime.datetime.now() +
-                      datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
+        from_last = ((datetime.datetime.now() 
+                    + datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
         m = {
             'first': first.strftime("%Y/%m/%d"),
             'last': last.strftime("%Y/%m/%d"),
@@ -328,7 +329,6 @@ else:
     try:
         mastodon.stream_user(Stream())
     except mastodon.Mastodon.MastodonMalformedEventError:
-        pass
         traceback.print_exc()
     except:
         mastodon.status_post(
