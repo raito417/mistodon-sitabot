@@ -254,10 +254,11 @@ def main(content, st, id):
         if content[0] == 'delete':
             # 「delete @sita」, 「@sita delete」
             deleteall(id)
-            mastodon.status_reply(st, '削除しました！')
+            mastodon.status_reply(st, '削除しました！', id, visibility='unlisted')
             return None
         else:
             # 「<target> @sita」, 「@sita <target>」
+            # <target>がdeleteのつもりの場合、意図せずdeleteall()される
             target = content[0]
             sita = add_sita(id, content)
             toot = add_sita_format(target, sita)
@@ -298,7 +299,7 @@ def main(content, st, id):
             reply_text = reply_text[:450] + '...'
         mastodon.status_reply(st, reply_text, id, visibility='unlisted')
     except:
-        mastodon.status_reply(st, 'エラー：不明なエラー', id, visibility='unlisted')
+        sita_error(st, '不明なエラー', id)
         traceback.print_exc()
         return toot
 
