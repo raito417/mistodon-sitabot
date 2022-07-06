@@ -241,7 +241,7 @@ def main(content, st, id):
     if content[0] == 'delete':
         deleteall(id)
         mastodon.status_reply(st, '削除しました！')
-    elif len(content) >= 2:
+    elif command and command == 'のいつ？'or 'まとめ':
         if command == 'のいつ？':
             itsu = noitsu(id, target, store)
             if itsu['count'] == 0:
