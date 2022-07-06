@@ -253,7 +253,10 @@ def main(content, st, id):
             toot = matome_format(target, m)
     else:
         sita = add_sita(id, content)
-        toot = f'おつパオ\n{sita["last_time"]}以来、{sita["interval"]}ぶり{sita["count"]}回目の{target}'
+        if sita["count"] == 1:
+            toot = f'おつパオ\n初めての{target}です。'
+        else:
+            toot = f'おつパオ\n{sita["last_time"]}以来、{sita["interval"]}ぶり{sita["count"]}回目の{target}'
     try:
         reply_text = toot.replace('@', '＠')
         if len(reply_text) >= 450:
