@@ -82,6 +82,9 @@ def format_times(time):
     int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
     return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
 
+def to_jst(time):
+    return (time + datetime.timedelta(hours=9)).replace(tzinfo=JST)
+
 db = create_db(is_test)
 
 
@@ -170,7 +173,7 @@ def matome(user, sitakoto, store):
     if count == 0:
         return {'count': 0}
     elif count == 1:
-        first = (sitakoto_dict[0] + datetime.timedelta(hours=9)).replace(tzinfo=JST)
+        first = to_jst(sitakoto_dict[0])
         from_first = ((datetime.datetime.now()
                         + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
         return {
@@ -179,11 +182,9 @@ def matome(user, sitakoto, store):
             'count': 1
         }
     else:
-        first, last = (sitakoto_dict[0] + datetime.timedelta(hours=9)).replace(tzinfo=JST),\
-                        (sitakoto_dict[-1]+ datetime.timedelta(hours=9)).replace(tzinfo=JST)
+        first, last = to_jst(sitakoto_dict[0]), to_jst(sitakoto_dict[-1])
         from_first = (last - first).days if (last - first).days != 0 else 1
-        from_last = ((datetime.datetime.now() 
-                    + datetime.timedelta(hours=9)).replace(tzinfo=JST) - last).days
+        from_last = (to_jst(datetime.datetime.now()) -last).days
         m = {
             'first': first.strftime("%Y/%m/%d"),
             'last': last.strftime("%Y/%m/%d"),
