@@ -230,7 +230,7 @@ def main(content, st, id):
     store = Store(db)
     toot = ''
     target = content[0]
-    command = content[1]
+    command = content[1] if len(content) >= 2 else None
     if not content or st['visibility'] == 'direct':
         return None
     elif len(content[0]) > 400:
