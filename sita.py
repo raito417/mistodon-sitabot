@@ -229,6 +229,8 @@ def deleteall(user):
 def main(content, st, id):
     store = Store(db)
     toot = ''
+    target = content[0]
+    command = content[1]
     if not content or st['visibility'] == 'direct':
         return None
     elif len(content[0]) > 400:
@@ -239,8 +241,6 @@ def main(content, st, id):
         deleteall(id)
         mastodon.status_reply(st, '削除しました！')
     elif len(content) >= 2:
-        target = content[0]
-        command = content[1]
         if command == 'のいつ？':
             itsu = noitsu(id, target, store)
             if itsu['count'] == 0:
