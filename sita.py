@@ -170,7 +170,7 @@ def matome(user, sitakoto, store):
     if count == 0:
         return {'count': 0}
     elif count == 1:
-        first = sitakoto_dict[0]
+        first = (sitakoto_dict[0] + datetime.timedelta(hours=9)).replace(tzinfo=JST)
         from_first = ((datetime.datetime.now()
                         + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
         return {
