@@ -82,6 +82,7 @@ def format_times(time):
     int_format = f'{int(days)}日{int(hours)}時間{int(minutes)}分'
     return {'lastTime': str(lastTime_format), 'interval': str(int_format)}
 
+
 def to_jst(time):
     return (time + datetime.timedelta(hours=9)).replace(tzinfo=JST)
 
@@ -141,6 +142,16 @@ def add_sita(user, sitakoto):
     return {'count': count, 'last_time': last_time, 'interval': interval, 'error': '何らかのエラー'}
 
 
+def add_sita_format(target, sita):
+
+    if sita["count"] == 0:
+        # 何らかのエラー
+        return ''
+    elif sita["count"] == 1:
+        return f'おつパオ\n初めての{target}です。'
+    else:
+        return f'おつパオ\n{sita["last_time"]}以来、{sita["interval"]}ぶり{sita["count"]}回目の{target}'
+
 # のいつ？
 def noitsu(user, sitakoto, store):
     sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
@@ -175,7 +186,7 @@ def matome(user, sitakoto, store):
     elif count == 1:
         first = to_jst(sitakoto_dict[0])
         from_first = ((datetime.datetime.now()
-                        + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
+                       + datetime.timedelta(hours=9)).replace(tzinfo=JST) - first).days
         return {
             'first': first.strftime("%Y/%m/%d %H:%M"),
             'from_first': from_first,
@@ -184,7 +195,7 @@ def matome(user, sitakoto, store):
     else:
         first, last = to_jst(sitakoto_dict[0]), to_jst(sitakoto_dict[-1])
         from_first = (last - first).days if (last - first).days != 0 else 1
-        from_last = (to_jst(datetime.datetime.now()) -last).days
+        from_last = (to_jst(datetime.datetime.now()) - last).days
         m = {
             'first': first.strftime("%Y/%m/%d"),
             'last': last.strftime("%Y/%m/%d"),
@@ -230,40 +241,65 @@ def deleteall(user):
 def main(content, st, id):
     store = Store(db)
     toot = ''
-    target = content[0]
-    command = content[1] if len(content) >= 2 else None
     if not content or st['visibility'] == 'direct':
+        # 「@sita」
         return None
     elif len(content[0]) > 400:
         sita_error(st, 'sitaの文字数が多すぎます', id)
         return None
 
-    if content[0] == 'delete':
-        deleteall(id)
-        mastodon.status_reply(st, '削除しました！')
-    elif command and command == ('のいつ？' or 'まとめ'):
+    target = None
+    command = None
+    if len(content) == 1:
+        if content[0] == 'delete':
+            # 「delete @sita」, 「@sita delete」
+            deleteall(id)
+            mastodon.status_reply(st, '削除しました！', id, visibility='unlisted')
+            return None
+        else:
+            # 「<target> @sita」, 「@sita <target>」
+            # <target>がdeleteのつもりの場合、意図せずdeleteall()される
+            target = content[0]
+            sita = add_sita(id, content)
+            toot = add_sita_format(target, sita)
+
+    elif len(content) >= 2:
+        target = content[0]
+        command = content[1]
         if command == 'のいつ？':
+            # 「<target> @sita のいつ？」,「@sita <target> のいつ？」,「<target> のいつ？ @sita」
             itsu = noitsu(id, target, store)
             if itsu['count'] == 0:
                 toot = f'あなたはまだ{target}をしたことがないようです。'
             else:
                 toot = f'最後に{target}したのは、{itsu["interval"]}前（{itsu["last_time"]}）の{itsu["count"]}回目です。'
         elif command == 'まとめ':
+            # 「<target> @sita まとめ」,「@sita <target> まとめ」,「<target> まとめ @sita」
             m = matome(id, content, store)
             toot = matome_format(target, m)
-    else:
-        sita = add_sita(id, content)
-        if sita["count"] == 1:
-            toot = f'おつパオ\n初めての{target}です。'
         else:
-            toot = f'おつパオ\n{sita["last_time"]}以来、{sita["interval"]}ぶり{sita["count"]}回目の{target}'
+            # 「<target> @sita あああ」,「@sita <target> あああ」,「<target> あああ @sita」
+            # commandに入っている文言は無視する
+            sita = add_sita(id, content)
+            toot = add_sita_format(target, sita)
+
+    else:
+        # ここには来ない想定
+        target = content[0]
+        sita = add_sita(id, content)
+        toot = add_sita_format(target, sita)
+
+    if len(toot) == 0:
+        sita_error(st, '仕様外の入力です', id)
+        return None
+
     try:
         reply_text = toot.replace('@', '＠')
         if len(reply_text) >= 450:
             reply_text = reply_text[:450] + '...'
         mastodon.status_reply(st, reply_text, id, visibility='unlisted')
     except:
-        mastodon.status_reply(st, 'エラー：不明なエラー', id, visibility='unlisted')
+        sita_error(st, '不明なエラー', id)
         traceback.print_exc()
         return toot
 
@@ -321,6 +357,20 @@ class TestSitaKoto(unittest.TestCase):
         self.assertEqual(
             "hogeのまとめ\n初回：2022/7/1 12:15(7日前)\n最新：2022/7/5 21:11(3日前)\nした回数：2回\n1週間の平均回数（全期間）：0.7", actual)
 
+    def test_add_sita_format_none(self):
+        # 何らかのエラーで0が入った場合
+        actual = add_sita_format("hoge", {'count': 0})
+        self.assertEqual("", actual)
+
+    def test_add_sita_format_one(self):
+        actual = add_sita_format("hoge", {'count': 1})
+        self.assertEqual("おつパオ\n初めてのhogeです。", actual)
+
+    def test_add_sita_format_two(self):
+        actual = add_sita_format(
+            "hoge", {'count': 2, "interval": "0日0時間2分", "last_time": "2022/7/5 21:11"})
+        self.assertEqual(
+            "おつパオ\n2022/7/5 21:11以来、0日0時間2分ぶり2回目のhoge", actual)
 
 def unit_test():
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestSitaKoto)
