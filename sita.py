@@ -433,8 +433,8 @@ if is_test:
 else:
     try:
         mastodon.stream_user(Stream())
-    except Mastodon.MastodonMalformedEventError:
-        traceback.print_exc()
+    #except mastodon.Mastodon.MastodonMalformedEventError:
+    #    traceback.print_exc()
     except:
         mastodon.status_post(
             '何らかのエラーが発生し、一時的に動作を停止しました。 @raito', visibility='unlisted')
