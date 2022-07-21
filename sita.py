@@ -433,7 +433,7 @@ if is_test:
 else:
     try:
         mastodon.stream_user(Stream())
-    except mastodon.Mastodon.MastodonMalformedEventError:
+    except Mastodon.MastodonMalformedEventError:
         traceback.print_exc()
     except:
         mastodon.status_post(
