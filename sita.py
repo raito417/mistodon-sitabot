@@ -6,9 +6,11 @@ import os
 import re
 import datetime
 import unittest
-
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import japanize_matplotlib
 # firestore
-from google.cloud import firestore
+from google.cloud import firestore, storage
 import urllib
 
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
@@ -46,6 +48,13 @@ def create_db(test=False):
     else:
         GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
         return firestore.Client(project=GCP_PROJECT_ID)
+
+def create_storage(test=False):
+    if test:
+        return {}
+    else:
+        GCP_PROJECT_ID = os.environ['GCP_PROJECT_ID']
+        return storage.Client(project=GCP_PROJECT_ID)
 
 
 def sita_error(st, content, id):
@@ -87,7 +96,7 @@ def to_jst(time):
     return (time + datetime.timedelta(hours=9)).replace(tzinfo=JST)
 
 db = create_db(is_test)
-
+st = create_storage(is_test)
 
 class Store:
     """
@@ -232,6 +241,45 @@ def matome_format(target, m):
 
     return '\n'.join(res)
 
+def trend(user, sitakoto, store):
+    target = sitakoto
+    sitakoto = sitakoto[0] if type(sitakoto) == list else sitakoto
+    sitakoto = re.sub('[\?\.\/\[\]\-=`~_]', '＿',
+                      urllib.parse.quote_plus(sitakoto))
+    try:
+        sitakoto_list = store.lookup(user, sitakoto)
+    except KeyError:
+        sitakoto_list = []
+    trend_list = [[],[]]
+    count = len(sitakoto_list)
+    if count >= 2 and sitakoto_list[-1] - sitakoto_list[0] >= datetime.timedelta(days=7):
+        for t in range(len(sitakoto_list)):
+            week_cnt = 1
+            while (t-week_cnt > 0) and (sitakoto_list[t] - sitakoto_list[t-week_cnt] <= datetime.timedelta(days=7)):
+                week_cnt += 1
+            trend_list[0].append(sitakoto_list[t].strftime("%Y/%m/%d"))
+            trend_list[1].append(week_cnt)
+
+        fig, ax = plt.subplots()
+        ax.plot(trend_list[0], trend_list[1])
+        ax.xaxis.set_major_locator(mdates.DayLocator(bymonthday=None, interval=7, tz=None))
+        plt.xticks(rotation=45, fontsize=10)
+        plt.grid()
+        plt.title(target)
+
+        plt.tight_layout()
+
+        file = f'{user}_{sitakoto}.png'
+        fig.savefig(file)
+
+        bucket = st.bucket('mistodon-sitabot')
+        blob = bucket.blob(file)
+        blob.upload_from_filename('temp/'+file)
+        url = f'https://storage.googleapis.com/mistodon-sitabot/{file}'
+        return url
+    else: return None
+
+
 
 def deleteall(user):
     db.collection('mist_sita').document(user).delete()
@@ -277,6 +325,9 @@ def main(content, st, id):
             # 「<target> @sita まとめ」,「@sita <target> まとめ」,「<target> まとめ @sita」
             m = matome(id, content, store)
             toot = matome_format(target, m)
+        elif command == 'グラフ':
+            url = trend(id, target, store)
+            toot = f'{target}の10回分移動平均線グラフです。\n{url}'
         else:
             # 「<target> @sita あああ」,「@sita <target> あああ」,「<target> あああ @sita」
             # commandに入っている文言は無視する
