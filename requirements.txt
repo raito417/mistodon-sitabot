@@ -44,4 +44,12 @@ six==1.16.0
 typing-extensions==3.10.0.2
 typing-inspect==0.7.1
 uritemplate==4.1.1
+<<<<<<< HEAD
 urllib3==1.26.7
+=======
+urllib3==1.26.7
+
+matplotlib
+google-cloud-storage
+japanize_matplotlib
+>>>>>>> b0b47847a468f0f081e228097e36ec0958ecf9c9
