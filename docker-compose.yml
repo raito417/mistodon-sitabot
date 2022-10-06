@@ -1,0 +1,12 @@
+version: '3'
+services:
+  main:
+    build: .
+    volumes: 
+      - ./:/work
+    environment:
+      - ACCESS_TOKEN="K8JFharwDdyqV7FbV_oHJkEMrh1tlpFLWO7AzQw8o8U"
+      - CLIENT_ID="wcAOzcGQ-k054SjPwhKBjt2ghdcq8ZgWufOhtDV9o7w"
+      - CLIENT_SECRET="aYgj6182a7zCyNiBeGfk3FgcKJuRDX2hSLlWXNugnqo"
+      - GCP_PROJECT_ID="river-nation-311307"
+      - GOOGLE_APPLICATION_CREDENTIALS="/work/google-cloud-sitabot-cred.json"
